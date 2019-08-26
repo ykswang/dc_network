@@ -4,6 +4,12 @@ DC test framework basic network library, can be used alone
 dep ensure -add github.com/ykswang/dc-networking@v1.0.1
 ```
 
+Document with godoc
+```shell script
+godoc -http=:8080
+```
+Go to  http://127.0.0.1:8080/pkg/github.com/ykswang/dc_network
+
 Sample Code
 
 ```go

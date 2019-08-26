@@ -25,7 +25,7 @@ func TestTraceGet(t *testing.T) {
 	url := "http://freeapi.ipip.net/8.8.8.8"
 	client := NewHttpClient()
 	client.SetTrace(true)
-	client.Transport.Proxy = nil  // 强制忽略代理，不然走代理拿不到DNS时间
+	client.Transport.Proxy = nil  // Skip proxy
 	fmt.Printf("[get]: --> %s\n", url)
 	resp, err := client.Get(url, nil)
 	if err != nil {

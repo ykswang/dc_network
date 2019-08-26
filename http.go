@@ -9,6 +9,7 @@ import (
 	"mime/multipart"
 	"net"
 	"net/http"
+	"net/http/cookiejar"
 	"net/http/httptrace"
 	"os"
 	"path/filepath"
@@ -85,8 +86,8 @@ func (v *DCHttpResponse) GetProto() (proto string) {
 }
 
 // Returns the header information
-// @param key: header key
-// @return value: the value of header key
+// @Param key: header key
+// @Return value: the value of header key
 func (v *DCHttpResponse) GetHeader(key string) (value string) {
 	value, ok := v.Header[key]
 	if !ok {
@@ -96,15 +97,15 @@ func (v *DCHttpResponse) GetHeader(key string) (value string) {
 }
 
 // Determine whether the specified header information is included
-// @param key: header key
-// @return ok: true means 'included'
+// @Param key: header key
+// @Return ok: true means 'included'
 func (v *DCHttpResponse) HasHeader(key string) (ok bool) {
 	_, ok = v.Header[key]
 	return
 }
 
 // Get all header information
-// @return headers: all header information
+// @Return headers: all header information
 func (v *DCHttpResponse) GetHeaders() (headers map[string]string) {
 	return v.Header
 }
@@ -113,7 +114,7 @@ func (v *DCHttpResponse) GetHeaders() (headers map[string]string) {
 //
 //  @premise：
 //  	DCHttpClient.SetTrace(true)
-//  @return
+//  @Return
 //  	traceInfo: the time-consuming information result
 func (v *DCHttpResponse) GetTraceInfo() (traceInfo *DCHttpTrace) {
 	return v.TraceInfo
@@ -293,6 +294,19 @@ func (v *DCHttpClient) SetTLSHandshakeTimeout(timeout time.Duration) {
 //     enable: true means traceMode on
 func (v *DCHttpClient) SetTrace(enable bool) {
 	v.Trace = enable
+}
+
+// Add a custom cookies jar
+//  @Params
+//     jar: the cookies jar, nil means disable cookies
+func (v *DCHttpClient) SetCookieJar(jar *cookiejar.Jar) {
+	v.Core.Jar = jar
+}
+
+// Add a default empty cookies jar
+func (v *DCHttpClient) NewCookieJar() {
+	cookieJar, _ := cookiejar.New(nil)
+	v.SetCookieJar(cookieJar)
 }
 
 // Send a get request
@@ -635,7 +649,7 @@ func (v *DCHttpClient) do(req *http.Request, headers map[string]string) (respons
 }
 
 // NewHttpClient help user to create a httpclient
-//  @return
+//  @Return
 //     client: DCHttpClient instance
 func NewHttpClient() (client *DCHttpClient) {
 

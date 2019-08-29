@@ -22,9 +22,9 @@ type DCHttpTrace struct {
 	TotalSart             time.Time        // Request start time
 	TotalEnd              time.Time        // Request completion time
 	TotalDuration         time.Duration    // Total time spent on one request.
-	DNSStart              time.Time        // Start lookup DNS. If the request is sent through the proxy, maybe value is zero
-	DNSDone               time.Time        // Finished lookup DNS. If the request is sent through the proxy, maybe value is zero
-	DNSDuration           time.Duration    // If the request is sent through the proxy, maybe value is zero
+	DNSStart              time.Time        // Start lookup DNS. If the request is sent through the proxy, maybe the value is zero
+	DNSDone               time.Time        // Finished lookup DNS. If the request is sent through the proxy, maybe the value is zero
+	DNSDuration           time.Duration    // If the request is sent through the proxy, maybe the value is zero
 	ConnectStart          time.Time        // TCP connect start
 	ConnectDone           time.Time        // TCP connected or failed
 	ConnectDuration       time.Duration    // Time spent on TCP connecting
@@ -33,7 +33,7 @@ type DCHttpTrace struct {
 	TLSHandshakeDuration  time.Duration    // Time spent on TLS handshake
 	RequestSended         time.Time        // Finished tp send request (headers + body)
 	ResponseReturned      time.Time        // Got the first bytes of response
-	ServerDuration        time.Duration    // The time taken by the server to process this request (including the time when the Response is returned on the road)
+	ServerDuration        time.Duration    // The time is taken by the server to process this request (including the time when the Response returned on the road)
 }
 
 // DCHttpResponse: Http response from DCHttpClient
@@ -45,7 +45,7 @@ type DCHttpResponse struct {
 	bodyErr     error                      // Body IO Error cache
 }
 
-// GetRawResponse return golang native response
+// GetRawResponse return Golang native response
 func (v *DCHttpResponse) GetRawResponse() *http.Response {
 	return v.Raw
 }
@@ -96,7 +96,7 @@ func (v *DCHttpResponse) GetHeader(key string) (value string) {
 	return
 }
 
-// Determine whether the specified header information is included
+// Determine whether the specified header information included
 // @Param key: header key
 // @Return ok: true means 'included'
 func (v *DCHttpResponse) HasHeader(key string) (ok bool) {
@@ -110,7 +110,7 @@ func (v *DCHttpResponse) GetHeaders() (headers map[string]string) {
 	return v.Header
 }
 
-// Get the step-by-step time-consuming information for this HTTP request
+// Get the time-consuming step-by-step information for this HTTP request
 //
 //  @premise：
 //  	DCHttpClient.SetTrace(true)
@@ -130,15 +130,47 @@ func (v *DCHttpResponse) Close() {
 
 // Http Client
 type DCHttpClient struct {
-	Dialer    *net.Dialer     // *net.Dialer
-	Core      *http.Client    // based http client
-	Transport *http.Transport // client properties
-	Trace     bool            // enable trace time spent
+	Dialer    *net.Dialer        // *net.Dialer
+	Core      *http.Client       // based http client
+	Transport *http.Transport    // client properties
+	Trace     bool               // enable trace time spent
+	CHeader   map[string]string  // global header
 }
 
-// With dual-stack support, if the server is also a dual-stack address, the client will first perform
-// a Fallback connection test on the IPv6 address according to the content defined in RFC 6555,
-// and determine whether it needs to be downgraded to the IPv4 request according to the delay of the FallbackDelay.
+// Set common header value
+// Common header will be included with per request
+//  @Param
+//     headers: all header you want to add (replace)
+func (v *DCHttpClient) SetCommonHeaders(headers map[string]string) {
+	for key, val := range headers {
+		v.CHeader[key] = val
+	}
+}
+
+// Set common header value
+// Common header will be included with per request
+//  @Param
+//     key: header's key
+//     value: header's value
+func (v *DCHttpClient) SetCommonHeader(key string, value string) {
+	v.CHeader[key] = value
+}
+
+// Clean common headers
+func (v *DCHttpClient) DelCommonHeaders() {
+	v.CHeader = make(map[string]string)
+}
+
+// Remove common headers by the key
+//  @Param
+//     key: header's key
+func (v *DCHttpClient) DelCommonHeader(key string) {
+	delete(v.CHeader, key)
+}
+
+// With dual-stack support, if the server is also a dual-stack address, the client will do a fallback
+// connection test on the IPv6 address according to the content defined in RFC 6555, and determine
+// whether it needs to downgrade to the IPv4 request according to the delay of the FallbackDelay.
 //  @Params
 //     delay: if set to 0, the system will be set as 300ms, if set to negative, it means disable IPv6
 func (v *DCHttpClient) SetFallbackDelay(delay time.Duration) {
@@ -148,20 +180,20 @@ func (v *DCHttpClient) SetFallbackDelay(delay time.Duration) {
 // Timeout of the connection established?
 //  @Params
 //     timeout: The default is 30s, 0 means unrestricted. Unrestricted does not mean that there is
-//              really no limit, but is limited by the operating system itself. Under normal circumstances,
-//              this limit may be around 3 minutes or even shorter.
+//              no limit on Golang but limited by the operating system itself. Under normal
+//              circumstances,  this limit may be around 3 minutes or even shorter.
 func (v *DCHttpClient) SetConnectTimeout(timeout time.Duration) {
 	v.Dialer.Timeout = timeout
 }
 
 // Keep-alive keepalive parameters at the TCP level
 //  @Params
-//     timout：The default is 30s. If it is 0, it will be the default value of the operating system.
+//     timout：The default is the 30s. If it is 0, it will be the default value of the operating system.
 //             If it is negative, the keep-alive will be disabled.
 //
-// This parameter corresponds to net.Dailer.KeepAlive, the document explains the mode, here is a
-// supplementary explanation In fact, this value is the tcp_keepalive_intvl and tcp_keepalive_time
-// values ​​at the tcp level. The linux man description is as follows
+// This parameter corresponds to the 'net. Dialer.KeepAlive', the document explains the mode,
+// here is a supplementary explanation. This value is the tcp_keepalive_intvl and tcp_keepalive_time
+// costs ​​at the TCP level. The Linux man description is as follows
 //
 //  tcp_keepalive_intvl (integer; default: 75; since Linux 2.4)
 //      The number of seconds between TCP keep-alive probes.
@@ -615,6 +647,10 @@ func (v *DCHttpClient) enableTraceRequest(req *http.Request, trace *DCHttpTrace)
 func (v *DCHttpClient) do(req *http.Request, headers map[string]string) (response *DCHttpResponse, err error) {
 
 	response = &DCHttpResponse{}
+
+	for k, v := range v.CHeader {
+		req.Header.Set(k, v)
+	}
 
 	for k, v := range headers {
 		req.Header.Set(k, v)
